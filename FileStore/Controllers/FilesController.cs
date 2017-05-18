@@ -96,22 +96,23 @@ namespace FileStore.Controllers
       if (initiatedFileUpload.FileUploaded)
         return BadRequest("File already uploaded");
 
-      dynamic savedFileData;
+      byte[] fileData;
       using (var stream = new MemoryStream())
       {
         Request.Body.CopyTo(stream);
-        var fileData = stream.ToArray();
-        savedFileData = await fileService.WriteFileDataToStorage(fileData, initiatedFileUpload.FileName);
+        fileData = stream.ToArray();
       }
 
-      if(!savedFileData.success)
+      var savedFileData = await fileService.WriteFileDataToStorage(fileData, initiatedFileUpload.FileName);
+
+      if (!savedFileData.success)
         return StatusCode(500, "Unable to store file");
 
       var savedUploadedFileInfo = await fileService.SaveUploadedFileInfo(initiatedFileUpload, savedFileData.storagePath, savedFileData.fileSize);
 
       if (!savedUploadedFileInfo.success)
         return StatusCode(500, "Unable to store file");
-      
+
       return Ok();
     }
   }

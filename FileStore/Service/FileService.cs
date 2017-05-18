@@ -123,7 +123,6 @@ namespace FileStore.Service
         var fileStoragePath = Path.Combine(appSettings.FileStoragePath, $"{Guid.NewGuid()}_{fileName}");
 
         using (var file = new FileStream(fileStoragePath, FileMode.CreateNew, FileAccess.Write))
-        using (var memoryStream = new MemoryStream())
         {
           await file.WriteAsync(data, 0, data.Length);
         }
