@@ -84,7 +84,7 @@ namespace FileStore.Middleware
 
     private Task<ClaimsIdentity> GetIdentity(string username, string password)
     {
-      if (username == "piktiv" && password == "piktiv123")
+      if (username == "secretname" && password == "secretstuff")
         return Task.FromResult(new ClaimsIdentity(new System.Security.Principal.GenericIdentity(username, "Token"), new Claim[] { }));
       
       return Task.FromResult<ClaimsIdentity>(null);

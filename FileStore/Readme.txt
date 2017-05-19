@@ -2,7 +2,7 @@
 
 1. Get token http://[host]/api/token
 Header => Content-Type: application/x-www-form-urlencoded
-Body => username=piktiv&password=piktiv123
+Body => username=secretname&password=secretstuff
 Returns => [token]
 
 2. Initiate file upload by providing file meta data. Needed in order to get a id for the file.
