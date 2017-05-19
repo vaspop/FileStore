@@ -8,8 +8,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.IO;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using FileStore.Middleware;
 
-namespace WebApplication1
+namespace FileStore
 {
   public class Startup
   {
@@ -27,15 +33,15 @@ namespace WebApplication1
 
     public void ConfigureServices(IServiceCollection services)
     {
-      services.Configure<AppSettings>(Configuration.GetSection("AppSettings"));
+      var appsettingsConfig = Configuration.GetSection("AppSettings");
+      ValidateAppSettings(appsettingsConfig);
 
       services.AddMvc();
-      services.AddEntityFramework()
+      services.Configure<AppSettings>(appsettingsConfig)
+              .AddEntityFramework()
               .AddEntityFrameworkSqlite()
-              .AddDbContext<FileDbContext>(options => options.UseSqlite("Data Source=filedb.sqlite"));
-
-      services.AddTransient<FileService>();
-
+              .AddDbContext<FileDbContext>(options => options.UseSqlite("Data Source=filedb.sqlite"))
+              .AddTransient<FileService>();
     }
 
     public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
@@ -43,9 +49,19 @@ namespace WebApplication1
       loggerFactory.AddConsole(Configuration.GetSection("Logging"))
                    .AddDebug();
 
+      InitializeDatabase(app);
+      SetAuthenticationMiddleware(app);
+
       app.UseMvc();
 
-      InitializeDatabase(app);
+    }
+
+    private void ValidateAppSettings(IConfigurationSection appsettingsConfig)
+    {
+      var storagePath = appsettingsConfig.GetValue<string>("FileStoragePath");
+
+      if (!Directory.Exists(storagePath))
+        throw new InvalidOperationException("Provided FileStoragePath in appsettings does not exist");
     }
 
     private void InitializeDatabase(IApplicationBuilder app)
@@ -53,9 +69,46 @@ namespace WebApplication1
       using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
       {
         var db = serviceScope.ServiceProvider.GetService<FileDbContext>();
-        db.Database.EnsureDeleted();
         db.Database.EnsureCreated();
       }
+    }
+
+
+    //Authentication middleware code copied from https://stormpath.com/blog/token-authentication-asp-net-core
+    private static readonly string secretAuthKey = "hemligthemligt123";
+    private void SetAuthenticationMiddleware(IApplicationBuilder app)
+    {
+      var signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(secretAuthKey));
+      var options = new TokenProviderOptions
+      {
+        Audience = "ExampleAudience",
+        Issuer = "ExampleIssuer",
+        SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256),
+        Expiration = TimeSpan.FromDays(2)
+      };
+
+      app.UseMiddleware<TokenProviderMiddleware>(Options.Create(options));
+
+      var tokenValidationParameters = new TokenValidationParameters
+      {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = signingKey,
+        
+        ValidateIssuer = true,
+        ValidIssuer = "ExampleIssuer",
+        
+        ValidateAudience = true,
+        ValidAudience = "ExampleAudience",
+        
+        ClockSkew = TimeSpan.Zero
+      };
+
+      app.UseJwtBearerAuthentication(new JwtBearerOptions
+      {
+        AutomaticAuthenticate = true,
+        AutomaticChallenge = true,
+        TokenValidationParameters = tokenValidationParameters
+      });
     }
   }
 }

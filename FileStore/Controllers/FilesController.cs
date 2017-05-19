@@ -5,6 +5,7 @@ using FileStore.Service;
 using FileStore.Models.ResponseResults;
 using FileStore.Models.Request;
 using System.IO;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FileStore.Controllers
 {
@@ -27,6 +28,7 @@ namespace FileStore.Controllers
     /// <param name="id">File identifier</param>
     /// <returns></returns>
     [HttpGet("GetFileMetadata/{id}")]
+    [Authorize]
     public async Task<IActionResult> GetFileMetadata(Guid id)
     {
       var result = await fileService.GetFileMetadata(id);
@@ -51,6 +53,7 @@ namespace FileStore.Controllers
     /// <param name="id">File identifier</param>
     /// <returns>File stream result containing the file data</returns>
     [HttpGet("DownloadFileData/{id}")]
+    [Authorize]
     public async Task<IActionResult> DownloadFileData(Guid id)
     {
       var result = await fileService.GetUploadedFile(id);
@@ -67,6 +70,7 @@ namespace FileStore.Controllers
     /// <param name="fileUploadInfo">Metadata of the file to be uploaded</param>
     /// <returns>Returns a guid which identifies the file to be uploaded. Needs to be used as the identifier for when uploading and downloading the file</returns>
     [HttpPost("InitiateFileUpload")]
+    [Authorize]
     public async Task<IActionResult> InitiateFileUpload([FromBody] FileMetadata fileUploadInfo)
     {
       if(fileUploadInfo == null)
@@ -86,6 +90,7 @@ namespace FileStore.Controllers
     /// <param name="id">File identifier</param>
     /// <returns></returns>
     [HttpPost("UploadFileData/{id}")]
+    [Authorize]
     public async Task<IActionResult> UploadFileData(Guid id)
     {
       var initiatedFileUpload = await fileService.GetInitiatedFileUpload(id);
